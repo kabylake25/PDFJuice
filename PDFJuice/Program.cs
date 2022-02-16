@@ -32,7 +32,7 @@ namespace PDFJuice
             
             if (args.Length == 0)
             {
-                pdfFilePath = workingDir + "\\Beispiel_1_Devi.pdf";
+                ShowHelp();
             }
             else if (args.Length == 1)
             {
@@ -40,32 +40,44 @@ namespace PDFJuice
             }
             else if (args.Length == 2)
             {
-                if (args[0].ToLower() == "extract" && File.Exists(args[1]))
+                if (args[0].ToLower() == "extract")
                 {
-                    pdfFilePath = args[1];
-                    GenerateSVGFiles(pdfFilePath);
-                    // Need to loop to all converted svg files
-                    DirectoryInfo dirInfo = new DirectoryInfo(workingDir); //Assuming Test is your Folder
-                    FileSystemInfo[] svgFiles = dirInfo.GetFileSystemInfos("*.svg");
-                    var orderSvgFiles = svgFiles.OrderBy(f => f.CreationTime);
-
-                    int count = 0;
-                    foreach (var svgFile in orderSvgFiles)
+                    if (File.Exists(args[1]))
                     {
-                        count++;
-                        Console.WriteLine("Parsing Page : {0}", count);
-                        Parse(textModelList, textModelPrev, dirInfo.FullName + "\\" + svgFile.Name);
-                        PostProcessing(textModelList);
-                        textModelPrev = new TextModel(textModelList.LastOrDefault());
-                        textModelPrev.Text = "";
-                        textModelPrev.Font = "";
-                        textModelPrev.IsUnderlined = false;
-                        textModelPrev.Me = "";
-                        textModelPrev.Menge = "";
-                    }
+                        pdfFilePath = args[1];
+                        GenerateSVGFiles(pdfFilePath);
+                        // Need to loop to all converted svg files
+                        DirectoryInfo dirInfo = new DirectoryInfo(workingDir); //Assuming Test is your Folder
+                        FileSystemInfo[] svgFiles = dirInfo.GetFileSystemInfos("*.svg");
+                        var orderSvgFiles = svgFiles.OrderBy(f => f.CreationTime);
 
-                    Display(textModelList);
-                    DeleteSVGFiles(workingDir);
+                        int count = 0;
+                        foreach (var svgFile in orderSvgFiles)
+                        {
+                            count++;
+                            Console.WriteLine("Parsing Page : {0}", count);
+                            Parse(textModelList, textModelPrev, dirInfo.FullName + "\\" + svgFile.Name);
+                            PostProcessing(textModelList);
+                            textModelPrev = new TextModel(textModelList.LastOrDefault());
+                            textModelPrev.Text = "";
+                            textModelPrev.Font = "";
+                            textModelPrev.IsUnderlined = false;
+                            textModelPrev.Me = "";
+                            textModelPrev.Menge = "";
+                        }
+
+                        Console.WriteLine("");
+                        Display(textModelList);
+                        DeleteSVGFiles(workingDir);
+                    }
+                    else 
+                    {
+                        Console.WriteLine("No pdf file found");
+                    }
+                }
+                else 
+                {
+                    ShowHelp();
                 }
             }
             
@@ -398,7 +410,7 @@ namespace PDFJuice
         {
             Process process = new Process();
             // Configure the process using the StartInfo properties.
-            process.StartInfo.FileName = @"C:\Users\TroniX\Downloads\ton2x\mupdf-1.19.0-windows\mutool.exe";
+            process.StartInfo.FileName = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\thirdparty\\mutool.exe";
             string executableLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             string args = string.Format("convert -F svg -O text=text -o {0}\\your_pdf_pg.svg {1}", executableLocation,pdfFilePath);
             process.StartInfo.Arguments = args;
