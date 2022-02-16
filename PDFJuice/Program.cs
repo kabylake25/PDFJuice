@@ -398,7 +398,7 @@ namespace PDFJuice
         {
             Process process = new Process();
             // Configure the process using the StartInfo properties.
-            process.StartInfo.FileName = @"C:\Users\TroniX\Downloads\ton2x\mupdf-1.19.0-windows\mutool.exe";
+            process.StartInfo.FileName = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\mutool.exe";
             string executableLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             string args = string.Format("convert -F svg -O text=text -o {0}\\your_pdf_pg.svg {1}", executableLocation,pdfFilePath);
             process.StartInfo.Arguments = args;
