@@ -12,17 +12,6 @@ namespace PDFJuice
 {
     internal class Program
     {
-        private const string KAP1 = "Kap 00";
-        private const string KAP2 = "Kap 000";
-        private const string KAP3 = "KAP 000.0";
-        private const string TEXT1 = "Text 00";
-        private const string TEXT2 = "Text 000";
-        private const string TEXT3 = "Text 000.0";
-        private const string TEXT = "Text";
-        private const string FONT = "Font";
-        private const string UNDERLINED = "Underlined";
-        private const string MENGE = "Menge";
-        private const string ME = "ME";
         public static readonly string[] meTypes = { "Stk.", "m", "kpl.", "Stk" };
 
         static void Main(string[] args)
