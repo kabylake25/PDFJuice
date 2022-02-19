@@ -5,6 +5,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using ClosedXML.Excel;
 
 namespace PDFJuice
 {
@@ -47,7 +48,7 @@ namespace PDFJuice
                         pdfFilePath = args[1];
                         GenerateSVGFiles(pdfFilePath);
                         // Need to loop to all converted svg files
-                        DirectoryInfo dirInfo = new DirectoryInfo(workingDir); //Assuming Test is your Folder
+                        DirectoryInfo dirInfo = new DirectoryInfo(workingDir);
                         FileSystemInfo[] svgFiles = dirInfo.GetFileSystemInfos("*.svg");
                         var orderSvgFiles = svgFiles.OrderBy(f => f.CreationTime);
 
@@ -61,7 +62,7 @@ namespace PDFJuice
                             textModelPrev = new TextModel(textModelList.LastOrDefault());
                             textModelPrev.Text = "";
                             textModelPrev.Font = "";
-                            textModelPrev.IsUnderlined = false;
+                            textModelPrev.Underlined = "";
                             textModelPrev.Me = "";
                             textModelPrev.Menge = "";
                         }
@@ -69,6 +70,8 @@ namespace PDFJuice
                         Console.WriteLine("");
                         Display(textModelList);
                         DeleteSVGFiles(workingDir);
+
+                        PopulateExcelDoc(textModelList);
                     }
                     else 
                     {
@@ -108,7 +111,6 @@ namespace PDFJuice
                             //skip this particular element
                             continue;
                         }
-                        //string output = new string(input.TakeWhile(char.IsDigit).ToArray());
 
                         //Get Attribute values like "style", "width", "height", etc..
                         string fontSize = childNod.Attributes().Where(e => e.Name.LocalName.Equals("font-size")).FirstOrDefault()?.Value;
@@ -162,10 +164,6 @@ namespace PDFJuice
                                             else if (output.Length == 3)
                                             {
                                                 // L2
-                                                //textModel.Kap1 = l1Kp1;
-                                                //textModel.Text1 = l1Text1;
-                                                //l1Kp2 = output;
-                                                //l1Text2 = input;
                                                 textModel = new TextModel(textModelPrev);
                                                 textModel.Kap2 = output;
                                                 textModel.Text2 = input.Substring(output.Length);
@@ -173,10 +171,6 @@ namespace PDFJuice
                                             else if (output.Length == 5)
                                             {
                                                 // L3
-                                                //textModel.Kap1 = l1Kp1;
-                                                //textModel.Text1 = l1Text1;
-                                                //textModel.Kap2 = l1Kp2;
-                                                //textModel.Text2 = l1Text2;
 
                                                 textModel = new TextModel(textModelPrev);
                                                 textModel.Kap3 = output;
@@ -209,15 +203,12 @@ namespace PDFJuice
                                         string num = new string(input.TakeWhile(char.IsDigit).ToArray());
                                         Decimal dummy;
                                         bool isAllNumber = Decimal.TryParse(input, out dummy);
-                                        //bool isAllNumber = input.Contains(".") && (input.IndexOf('.') + 2 == input.Length);
 
                                         if (!num.Equals(string.Empty) && !isAllNumber)
                                         {
 
                                             if (meTypes.Any(input.Contains) && !(input.Contains("/") || input.Contains('"')))
                                             {
-                                                //textModel.Menge = num;
-                                                //textModel.Me = input.Substring(num.Length);
                                                 
                                                 var lastModel = textModelList.LastOrDefault();
                                                 if (lastModel != null)
@@ -256,7 +247,6 @@ namespace PDFJuice
                                                             textModel.Menge = num;
                                                             textModel.Text = tempInput;
                                                         }
-                                                        //isMeTypes = true;
                                                         break;
                                                     }                                                    
                                                 }
@@ -278,7 +268,7 @@ namespace PDFJuice
 
                                 if (textModel != null && !isMeTypes)
                                 {
-                                    textModel.IsUnderlined = false; // reset underlined property
+                                    textModel.Underlined = ""; // reset underlined property
 
                                     if (spans.Count() == 1 && bIsBold)
                                     {
@@ -300,8 +290,6 @@ namespace PDFJuice
 
                             }
                         }
-
-                        //Console.WriteLine("Font-Family: " + fontFamily + " Font-Size: " + fontSize + " Font-Weight: " + fontWeight);
                     }
                     else
                     {
@@ -316,10 +304,9 @@ namespace PDFJuice
                             else
                             {
                                 // Now we are we are sure that the previous text/heading is underlined.
-                                //Console.WriteLine("Underlined");
                                 if (textModelPrev != null)
                                 {
-                                    textModelPrev.IsUnderlined = true;
+                                    textModelPrev.Underlined = "Underlined";
                                     textModelList.Add(textModelPrev);
                                 }
                             }
@@ -367,25 +354,17 @@ namespace PDFJuice
                                 text += item.Text + " ";
                                 if (!isUnderlined) 
                                 {
-                                    isUnderlined = item.IsUnderlined || item.Text.Equals("Total");
+                                    isUnderlined = !string.IsNullOrEmpty(item.Underlined) || item.Text.Equals("Total");
                                 }
                             }
                         }
                         combinedModel.Text = text.Trim();
-                        combinedModel.IsUnderlined = isUnderlined;
+                        combinedModel.Underlined = "Underlined";
                     }
 
                     textModelList.RemoveRange(totalIndex, indexToCombine);
                     textModelList.Add(combinedModel);
                 }
-
-
-                /*
-                Console.WriteLine("--- Kap00 --- " + " Text 00 --- " + "Kap000 --- " + "Kap 000.0 --- " +
-                                      "Text 000.0 --- " + "Text --- " + "Font --- " + "Underlined --- " +
-                                      "Menge --- " + "ME --- ");
-                */
-
                 
             }
         }
@@ -395,13 +374,14 @@ namespace PDFJuice
             Console.WriteLine("Display Table...");
             foreach (var textModel in textModelList)
             {
-                string underLined = textModel.IsUnderlined ? "Underlined" : "";
+                //string underLined = textModel.IsUnderlined ? "Underlined" : "";
 
                 Console.WriteLine(textModel.Kap1 + " - " + textModel.Text1 + " - " +
                                   textModel.Kap2 + " - " + textModel.Text2 + " - " +
                                   textModel.Kap3 + " - " + textModel.Text3 + " - " +
                                   textModel.Text + " - " + textModel.Font + " - " +
-                                  underLined + " - " + textModel.Menge + " - " +
+                                  textModel.Text + " - " + textModel.Font + " - " +
+                                  textModel.Underlined + " - " + textModel.Menge + " - " +
                                   textModel.Me + " - ");
             }
         }
@@ -433,6 +413,17 @@ namespace PDFJuice
                      "\t" + "example : extract C:\\temp\\mypdf.pdf" + "\n" +
                      "Help:" + "\t" + "h or help"
                 );
+        }
+
+        static void PopulateExcelDoc(List<TextModel> textModel) 
+        {
+            var wb = new XLWorkbook(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\Devi_XLS_Template.xlsx");
+            var worksheet1 = wb.Worksheet("Tabelle1");
+            var textModelEnum = textModel.AsEnumerable();
+
+            var rangeWithData = worksheet1.Cell(2, 2).InsertData(textModelEnum);
+            worksheet1.Columns().AdjustToContents();
+            wb.SaveAs("InsertingData.xlsx");
         }
     }
 }

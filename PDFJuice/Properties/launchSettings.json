@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PDFJuice": {
+      "commandName": "Project",
+      "commandLineArgs": "extract C:\\Users\\TroniX\\Downloads\\ton2x\\Beispiel_1_Devi.pdf"
+    }
+  }
+}
