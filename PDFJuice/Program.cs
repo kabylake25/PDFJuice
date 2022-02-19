@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using ClosedXML.Excel;
+using System.Threading;
 
 namespace PDFJuice
 {
@@ -46,32 +47,60 @@ namespace PDFJuice
                     if (File.Exists(args[1]))
                     {
                         pdfFilePath = args[1];
-                        GenerateSVGFiles(pdfFilePath);
-                        // Need to loop to all converted svg files
-                        DirectoryInfo dirInfo = new DirectoryInfo(workingDir);
-                        FileSystemInfo[] svgFiles = dirInfo.GetFileSystemInfos("*.svg");
-                        var orderSvgFiles = svgFiles.OrderBy(f => f.CreationTime);
 
-                        int count = 0;
-                        foreach (var svgFile in orderSvgFiles)
+                        Console.WriteLine("Started at " + DateTime.Now.ToString());
+                        Console.WriteLine(string.Format("Parsing File: {0}", pdfFilePath));
+
+                        try
                         {
-                            count++;
-                            Console.WriteLine("Parsing Page : {0}", count);
-                            Parse(textModelList, textModelPrev, dirInfo.FullName + "\\" + svgFile.Name);
-                            PostProcessing(textModelList);
-                            textModelPrev = new TextModel(textModelList.LastOrDefault());
-                            textModelPrev.Text = "";
-                            textModelPrev.Font = "";
-                            textModelPrev.Underlined = "";
-                            textModelPrev.Me = "";
-                            textModelPrev.Menge = "";
+                            GenerateSVGFiles(pdfFilePath);
+                            // Need to loop to all converted svg files
+                            DirectoryInfo dirInfo = new DirectoryInfo(workingDir);
+                            FileSystemInfo[] svgFiles = dirInfo.GetFileSystemInfos("*.svg");
+                            var orderSvgFiles = svgFiles.OrderBy(f => f.CreationTime);
+                            
+                            int count = 0;
+
+                            foreach (var svgFile in orderSvgFiles)
+                            {
+                                count++;
+                                //Console.WriteLine("Parsing Page : {0}", count);
+                                Parse(textModelList, textModelPrev, dirInfo.FullName + "\\" + svgFile.Name);
+                                PostProcessing(textModelList);
+                                textModelPrev = new TextModel(textModelList.LastOrDefault());
+                                textModelPrev.Text = "";
+                                textModelPrev.Font = "";
+                                textModelPrev.Underlined = "";
+                                textModelPrev.Me = "";
+                                textModelPrev.Menge = "";
+                            }
+
+                            //Display(textModelList);
+                            DeleteSVGFiles(workingDir);
+                            PopulateExcelDoc(textModelList);
+                            
+                            //This just adding a progress bar which adds 4-5seconds delay.
+                            using (var progress = new ProgressBar())
+                            {
+                                for (int i = 0; i <= 50; i++)
+                                {
+                                    progress.Report((double)i / 50);
+                                    Thread.Sleep(20);
+                                }
+                            }
+
+                            Console.WriteLine("Total Pages Extracted: " + count);
                         }
-
-                        Console.WriteLine("");
-                        Display(textModelList);
-                        DeleteSVGFiles(workingDir);
-
-                        PopulateExcelDoc(textModelList);
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.StackTrace);
+                        }
+                        finally 
+                        {
+                            DeleteSVGFiles(workingDir);
+                        }
+                        
+                        Console.WriteLine("Completed at " + DateTime.Now.ToString());
                     }
                     else 
                     {
@@ -140,16 +169,6 @@ namespace PDFJuice
 
                                         if (!String.IsNullOrEmpty(output))
                                         {
-                                            int dotIndex = input.IndexOf('.');
-                                            if (dotIndex > -1 && dotIndex < input.Length)
-                                            {
-                                                string[] decimalPart = input.Split('.');
-                                                if (decimalPart.Length == 2)
-                                                {
-                                                    int decimalPlace = decimalPart[1].TakeWhile(char.IsDigit).Count();
-                                                    output = output + input.Substring(dotIndex, decimalPlace + 1);
-                                                }
-                                            }
 
                                             if (textModelList.Count == 0)
                                             {
@@ -160,23 +179,58 @@ namespace PDFJuice
                                                 //l1Kp1 = output;
                                                 //l1Text1 = input;
                                             }
-
-                                            else if (output.Length == 3)
+                                            else 
                                             {
-                                                // L2
                                                 textModel = new TextModel(textModelPrev);
-                                                textModel.Kap2 = output;
-                                                textModel.Text2 = input.Substring(output.Length);
-                                            }
-                                            else if (output.Length == 5)
-                                            {
-                                                // L3
+                                                int dotIndex = input.IndexOf('.');
+                                                if (dotIndex > -1 && dotIndex < input.Length)
+                                                {
+                                                    string[] decimalPart = input.Split('.');
+                                                    if (decimalPart.Length == 2)
+                                                    {
+                                                        int decimalPlace = decimalPart[1].TakeWhile(char.IsDigit).Count();
+                                                        output = output + input.Substring(dotIndex, decimalPlace + 1);
+                                                    }
+                                                    else if (decimalPart.Length == 3) 
+                                                    {
+                                                        int decimalPlace = decimalPart[1].TakeWhile(char.IsDigit).Count();
+                                                        output = output + input.Substring(dotIndex, decimalPlace + 2);
+                                                    }
+                                                    else if (decimalPart.Length == 4)
+                                                    {
+                                                        int decimalPlace = decimalPart[1].TakeWhile(char.IsDigit).Count();
+                                                        output = output + input.Substring(dotIndex, decimalPlace + 3);
+                                                    }
+                                                }
 
-                                                textModel = new TextModel(textModelPrev);
-                                                textModel.Kap3 = output;
-                                                textModel.Text3 = input.Substring(output.Length);
-                                                //l1Kp3 = output;
-                                                //l1Text3 = input;
+                                                if (output.Length == 3)
+                                                {
+                                                    // L2
+                                                    textModel.Kap2 = output;
+                                                    textModel.Text2 = input.Substring(output.Length);
+                                                }
+                                                else if (output.Length == 5)
+                                                {
+                                                    // L3
+                                                    textModel.Kap3 = output;
+                                                    textModel.Text3 = input.Substring(output.Length);
+                                                }
+                                                else if (output.Length == 7)
+                                                {
+                                                    // L4
+                                                    textModel.Kap4 = output;
+                                                    textModel.Text4 = input.Substring(output.Length);
+                                                }
+                                                else if (output.Length == 9)
+                                                {
+                                                    // L5
+                                                    textModel.Kap5 = output;
+                                                    textModel.Text5 = input.Substring(output.Length);
+                                                }
+                                                else 
+                                                {
+                                                    // L6?
+                                                }
                                             }
                                         }
                                         else
@@ -320,7 +374,7 @@ namespace PDFJuice
                 }
             }
 
-            Console.WriteLine("Parsing Done");
+            //Console.WriteLine("Parsing Done");
         }
 
         static void PostProcessing(List<TextModel> textModelList)
@@ -374,8 +428,6 @@ namespace PDFJuice
             Console.WriteLine("Display Table...");
             foreach (var textModel in textModelList)
             {
-                //string underLined = textModel.IsUnderlined ? "Underlined" : "";
-
                 Console.WriteLine(textModel.Kap1 + " - " + textModel.Text1 + " - " +
                                   textModel.Kap2 + " - " + textModel.Text2 + " - " +
                                   textModel.Kap3 + " - " + textModel.Text3 + " - " +
@@ -421,9 +473,9 @@ namespace PDFJuice
             var worksheet1 = wb.Worksheet("Tabelle1");
             var textModelEnum = textModel.AsEnumerable();
 
-            var rangeWithData = worksheet1.Cell(2, 2).InsertData(textModelEnum);
+            worksheet1.Cell(2, 2).InsertData(textModelEnum);
             worksheet1.Columns().AdjustToContents();
-            wb.SaveAs("InsertingData.xlsx");
+            wb.SaveAs(string.Format("Devi_XLS_Output_{0}.xlsx", string.Format("{0:yyyy-MM-dd_HH-mm-ss-fff}", DateTime.Now)));
         }
     }
 }
