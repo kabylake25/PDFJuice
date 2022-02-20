@@ -432,8 +432,12 @@ namespace PDFJuice
             Process process = new Process();
             // Configure the process using the StartInfo properties.
             process.StartInfo.FileName = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "\\thirdparty\\mutool.exe";
+            
             string executableLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            string args = string.Format("convert -F svg -O text=text -o {0}\\your_pdf_pg.svg {1}", executableLocation,pdfFilePath);
+            string inputPath = "\"" + pdfFilePath + "\"";
+            string outputPath = string.Format("\"" + "{0}\\your_pdf_pg.svg" + "\"", executableLocation);
+            string args = string.Format("convert -F svg -O text=text -o {0} {1}", outputPath, inputPath);
+            
             process.StartInfo.Arguments = args;
             process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
             process.Start();
